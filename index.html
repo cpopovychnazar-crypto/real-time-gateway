@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Operations Gateway</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: #ffffff;
+        }
+
+        header {
+            padding: 25px;
+            background: #182338;
+            border-bottom: 1px solid #2c3b52;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        header p {
+            color: #94a3b8;
+            margin-bottom: 0;
+        }
+
+        .status {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            background: #263b32;
+            color: #4ade80;
+            font-size: 14px;
+        }
+
+        .container {
+            padding: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #1c293d;
+            border: 1px solid #2c3b52;
+            border-radius: 14px;
+            padding: 22px;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            color: #94a3b8;
+            margin-top: 0;
+        }
+
+        .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .unit {
+            font-size: 16px;
+            color: #94a3b8;
+        }
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: #334155;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #38bdf8;
+            transition: width 0.5s;
+        }
+
+        .info {
+            margin: 25px;
+            padding: 20px;
+            background: #1c293d;
+            border-radius: 14px;
+            color: #94a3b8;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Real-Time Operations Gateway</h1>
+    <p>Системний моніторинг у реальному часі</p>
+    <div class="status" id="connectionStatus">Підключення...</div>
+</header>
+
+<div class="container">
+
+    <div class="card">
+        <h2>CPU Usage</h2>
+        <div class="value"><span id="cpu">0</span><span class="unit"> %</span></div>
+        <div class="progress">
+            <div class="progress-bar" id="cpuBar"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>RAM Usage</h2>
+        <div class="value"><span id="ram">0</span><span class="unit"> %</span></div>
+        <div class="progress">
+            <div class="progress-bar" id="ramBar"></div>
+        </div>
+        <p id="ramDetails"></p>
+    </div>
+
+    <div class="card">
+        <h2>Goroutines</h2>
+        <div class="value" id="goroutines">0</div>
+        <p class="unit">Активні Go-потоки</p>
+    </div>
+
+    <div class="card">
+        <h2>Heap Memory</h2>
+        <div class="value" id="heap">0</span></div>
+        <p class="unit">Пам'ять Go Heap</p>
+    </div>
+
+</div>
+
+<div class="info">
+    <strong>Останнє оновлення:</strong>
+    <span id="timestamp">Очікування даних...</span>
+</div>
+
+<footer>
+    Real-Time Operations Gateway | SSE Monitoring
+</footer>
+
+<script>
+    const connectionStatus = document.getElementById("connectionStatus");
+
+    const eventSource = new EventSource(
+        "http://localhost:8080/api/v1/metrics/stream"
+    );
+
+    eventSource.onopen = function () {
+        connectionStatus.textContent = "● Connected";
+    };
+
+    eventSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+
+        document.getElementById("cpu").textContent =
+            data.cpu_usage.toFixed(2);
+
+        document.getElementById("cpuBar").style.width =
+            data.cpu_usage + "%";
+
+        document.getElementById("ram").textContent =
+            data.ram_usage.toFixed(2);
+
+        document.getElementById("ramBar").style.width =
+            data.ram_usage + "%";
+
+        document.getElementById("ramDetails").textContent =
+            (data.ram_used / 1024 / 1024 / 1024).toFixed(2) +
+            " GB / " +
+            (data.ram_total / 1024 / 1024 / 1024).toFixed(2) +
+            " GB";
+
+        document.getElementById("goroutines").textContent =
+            data.goroutines;
+
+        document.getElementById("heap").textContent =
+            (data.heap_alloc / 1024 / 1024).toFixed(2) + " MB";
+
+        document.getElementById("timestamp").textContent =
+            new Date(data.timestamp).toLocaleString("uk-UA");
+    };
+
+    eventSource.onerror = function () {
+        connectionStatus.textContent = "● Reconnecting...";
+    };
+</script>
+
+</body>
+</html>
